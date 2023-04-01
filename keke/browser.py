@@ -11,7 +11,7 @@ SESSION_JSON = Path("keke-selenium-session.json")
 
 def create_driver() -> WebDriver:
     profile = webdriver.FirefoxProfile(  # type: ignore[no-untyped-call]
-        "/home/kaiant/prg/ai/keke/firefox-profile"
+        "./firefox-profile"
     )
     driver = webdriver.Firefox(profile)
     return driver
