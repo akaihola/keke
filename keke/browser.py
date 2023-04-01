@@ -8,11 +8,13 @@ from selenium.webdriver.remote.webdriver import WebDriver
 SESSION_JSON = Path("keke-selenium-session.json")
 
 
-def create_driver() -> WebDriver:
+def create_driver(headless: bool) -> WebDriver:
     profile = webdriver.FirefoxProfile(  # type: ignore[no-untyped-call]
         "./firefox-profile"
     )
-    driver = webdriver.Firefox(profile)
+    options = webdriver.FirefoxOptions()
+    options.headless = headless
+    driver = webdriver.Firefox(profile, options=options)
     return driver
 
 

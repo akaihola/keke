@@ -16,6 +16,7 @@ from keke.whatsapp import open_group, read_messages
 def main() -> None:
     parser = ArgumentParser()
     parser.set_defaults(func=lambda _: parser.print_help())
+    parser.add_argument("--headless", action="store_true")
     subparsers = parser.add_subparsers()
 
     parser_run_driver = subparsers.add_parser("run-driver")
@@ -31,7 +32,7 @@ def main() -> None:
 
 
 def run_driver(args: Namespace) -> None:
-    driver = create_driver()
+    driver = create_driver(headless=args.headless)
     session = {"url": driver.command_executor._url, "session_id": driver.session_id}
     SESSION_JSON.write_text(json.dumps(session))
     input("Press enter to close the browser")
@@ -42,7 +43,7 @@ def run_with_firefox(args: Namespace) -> None:
     if args.use_open_driver:
         driver = attach_to_driver()
     else:
-        driver = create_driver()
+        driver = create_driver(headless=args.headless)
     open_group(driver, args.group)
     all_messages: list[WhatsAppMessage] = []
     quit_ = False
