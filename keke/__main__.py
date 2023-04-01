@@ -4,6 +4,7 @@ from argparse import ArgumentParser, Namespace
 from datetime import datetime, timedelta
 from time import sleep
 
+from selenium.common import WebDriverException
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 
@@ -67,7 +68,12 @@ def run_with_firefox(args: Namespace) -> None:
                 message_field = driver.find_element(
                     By.XPATH, "//div[@title='Kirjoita viesti']"
                 )
-                message_field.click()
+                try:
+                    message_field.click()
+                except WebDriverException:
+                    driver.save_screenshot(
+                        f"keke-{datetime.now():%Y-%m-%dT%H-%M-%S}.png"
+                    )
                 for char in f"{KEKE_PREFIX}{completion}":
                     message_field.send_keys(char)
                     sleep(0.01)
