@@ -1,6 +1,6 @@
+from datetime import datetime
 from typing import Callable
 
-from datetime import datetime
 from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver

@@ -8,9 +8,9 @@ from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 
 from keke import ai
-from keke.browser import SESSION_JSON, create_driver, attach_to_driver
+from keke.browser import SESSION_JSON, attach_to_driver, create_driver
 from keke.data_types import KEKE_PREFIX, WhatsAppMessage
-from keke.whatsapp import read_messages, open_group
+from keke.whatsapp import open_group, read_messages
 
 
 def main() -> None:

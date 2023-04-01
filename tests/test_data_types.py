@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from keke.data_types import WhatsAppMessage, OpenAiMessage
+from keke.data_types import OpenAiMessage, WhatsAppMessage
 
 
 @pytest.mark.parametrize(

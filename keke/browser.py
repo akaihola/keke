@@ -1,8 +1,7 @@
+import json
+from pathlib import Path
 from typing import Any
 
-import json
-
-from pathlib import Path
 from selenium import webdriver
 from selenium.webdriver.remote.webdriver import WebDriver
 
