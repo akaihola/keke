@@ -89,7 +89,8 @@ def participate_in_chat(driver: WebDriver, args: Namespace) -> None:
                     message_field.click()
                 except WebDriverException:
                     driver.save_screenshot(
-                        f"keke-{datetime.now():%Y-%m-%dT%H-%M-%S}.png"
+                        f"keke-{datetime.now():%Y-%m-%dT%H-%M-%S}"
+                        " compose box input not found.png"
                     )
                 for char in f"{KEKE_PREFIX}{completion}":
                     message_field.send_keys(char)
