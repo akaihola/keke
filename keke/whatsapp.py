@@ -69,3 +69,26 @@ def open_group(driver: WebDriver, group: str) -> None:
         lambda d: d.find_element(By.XPATH, f"//span[@title='{group}']")
     )
     group_link.click()
+
+
+def find_groups_with_unread(driver: WebDriver) -> dict[str, WebElement]:
+    """Return a dictionary of groups with unread messages and their links.
+
+    :param driver: The Selenium WebDriver.
+    :return: A dictionary of group names and their links.
+
+    """
+    counts = driver.find_elements(By.XPATH, "//span[@data-testid='icon-unread-count']")
+    containers = [
+        count.find_element(
+            By.XPATH, "./ancestor::div[@data-testid='cell-frame-container']"
+        )
+        for count in counts
+    ]
+    titles = [
+        container.find_element(
+            By.XPATH, ".//div[@data-testid='cell-frame-title']/span[@title]"
+        )
+        for container in containers
+    ]
+    return {title.get_attribute("title"): title for title in titles}
