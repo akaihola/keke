@@ -58,9 +58,13 @@ def last_msgid_is_not(msgid: str) -> Callable[[WebDriver], bool]:
     return _msgid_not
 
 
-def open_group(driver: WebDriver, group: str) -> None:
+def open_whatsapp(driver: WebDriver) -> None:
     if driver.current_url != WHATSAPP_WEB_URL:
         driver.get(WHATSAPP_WEB_URL)
+
+
+def open_group(driver: WebDriver, group: str) -> None:
+    open_whatsapp(driver)
     group_link = WebDriverWait(driver, 30).until(
         lambda d: d.find_element(By.XPATH, f"//span[@title='{group}']")
     )
