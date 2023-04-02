@@ -82,7 +82,8 @@ def participate_in_chat(driver: WebDriver, args: Namespace) -> None:
                     flags=re.VERBOSE,
                 )
                 message_field = driver.find_element(
-                    By.XPATH, "//div[@title='Kirjoita viesti']"
+                    By.XPATH,
+                    "//div[@data-testid='compose-box']//div[@contenteditable='true']",
                 )
                 try:
                     message_field.click()
