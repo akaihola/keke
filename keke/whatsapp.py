@@ -92,3 +92,19 @@ def find_groups_with_unread(driver: WebDriver) -> dict[str, WebElement]:
         for container in containers
     ]
     return {title.get_attribute("title"): title for title in titles}
+
+
+def get_selected_group_title(driver: WebDriver) -> str:
+    """Return the title of the currently selected group.
+
+    :param driver: The Selenium WebDriver.
+    :return: The title of the currently selected group.
+
+    """
+    return driver.find_element(
+        By.XPATH,
+        ".//div[@id='pane-side']"
+        "//div[@role='row' and @aria-selected='true']"
+        "//div[@data-testid='cell-frame-title']"
+        "/span[@title]",
+    ).get_attribute("title")
