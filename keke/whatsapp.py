@@ -1,13 +1,14 @@
 from datetime import datetime
+from time import sleep
 from typing import Callable
 
-from selenium.common import NoSuchElementException
+from keke.data_types import KEKE_PREFIX, WhatsAppMessage
+from selenium.common import NoSuchElementException, WebDriverException
+from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.wait import WebDriverWait
-
-from keke.data_types import WhatsAppMessage
 
 WHATSAPP_WEB_URL = "https://web.whatsapp.com/"
 
@@ -108,3 +109,21 @@ def get_selected_group_title(driver: WebDriver) -> str:
         "//div[@data-testid='cell-frame-title']"
         "/span[@title]",
     ).get_attribute("title")
+
+
+def send_message(driver: WebDriver, completion: str) -> None:
+    message_field = driver.find_element(
+        By.XPATH,
+        "//div[@data-testid='compose-box']//div[@contenteditable='true']",
+    )
+    try:
+        message_field.click()
+    except WebDriverException:
+        driver.save_screenshot(
+            f"keke-{datetime.now():%Y-%m-%dT%H-%M-%S}"
+            " compose box input not found.png"
+        )
+    for char in f"{KEKE_PREFIX}{completion}":
+        message_field.send_keys(char)
+        sleep(0.01)
+    message_field.send_keys(Keys.RETURN)

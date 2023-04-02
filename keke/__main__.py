@@ -3,17 +3,13 @@ import logging
 import re
 from argparse import ArgumentParser, Namespace
 from datetime import datetime, timedelta
-from time import sleep
-
-from selenium.common import WebDriverException
-from selenium.webdriver import Keys
-from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webdriver import WebDriver
 
 from keke import ai
 from keke.browser import SESSION_JSON, attach_to_driver, create_driver
-from keke.data_types import KEKE_PREFIX, WhatsAppMessage
-from keke.whatsapp import open_group, read_messages
+from keke.data_types import WhatsAppMessage
+from keke.whatsapp import open_group, read_messages, send_message
+from selenium.common import WebDriverException
+from selenium.webdriver.remote.webdriver import WebDriver
 
 logger = logging.getLogger(__name__)
 
@@ -63,43 +59,28 @@ def run_with_firefox(args: Namespace) -> None:
 def participate_in_chat(driver: WebDriver, args: Namespace) -> None:
     open_group(driver, args.group)
     all_messages: list[WhatsAppMessage] = []
-    quit_ = False
     while True:
+        new_messages = read_messages(driver, all_messages)
+        if not new_messages:
+            continue
+        all_messages.extend(new_messages)
+        last_message = new_messages[-1]
+        recent_messages = [m for m in new_messages if is_recent(m) or m is last_message]
+        respond = any(is_for_keke(m) for m in recent_messages)
+        quit_ = any(is_quit(m) for m in recent_messages)
+        if respond:
+            completion = re.sub(
+                pattern=r"^ \s* \*? Keke : \s*",
+                repl="",
+                string=ai.interact(all_messages),
+                flags=re.VERBOSE,
+            )
+            send_message(driver, completion)
         if quit_:
             break
-        new_messages = read_messages(driver, all_messages)
-        for message in new_messages:
-            print(message)
-            all_messages.append(message)
-            if is_for_keke(message) and is_recent(message):
-                if is_quit(message):
-                    quit_ = True
-                    break
-                completion = re.sub(
-                    pattern=r"^ \s* \*? Keke : \s*",
-                    repl="",
-                    string=ai.interact(all_messages),
-                    flags=re.VERBOSE,
-                )
-                message_field = driver.find_element(
-                    By.XPATH,
-                    "//div[@data-testid='compose-box']//div[@contenteditable='true']",
-                )
-                try:
-                    message_field.click()
-                except WebDriverException:
-                    driver.save_screenshot(
-                        f"keke-{datetime.now():%Y-%m-%dT%H-%M-%S}"
-                        " compose box input not found.png"
-                    )
-                for char in f"{KEKE_PREFIX}{completion}":
-                    message_field.send_keys(char)
-                    sleep(0.01)
-                message_field.send_keys(Keys.RETURN)
 
 
 def is_recent(message: WhatsAppMessage) -> bool:
-    print(f"Comparing {message.timestamp} to {datetime.now() - timedelta(minutes=1)}")
     return datetime.now() - message.timestamp < timedelta(minutes=1)
 
 
