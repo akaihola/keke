@@ -1,0 +1,2 @@
+class ChatState:
+    pass

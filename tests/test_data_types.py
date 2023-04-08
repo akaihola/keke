@@ -2,7 +2,8 @@ from datetime import datetime
 
 import pytest
 
-from keke.data_types import OpenAiMessage, WhatsAppMessage
+from keke.data_types import MessageContent, OpenAiMessage
+from keke.whatsapp import WhatsAppMessage, WhatsAppMessageId
 
 
 @pytest.mark.parametrize(
@@ -17,6 +18,9 @@ def test_whatsapp_message_to_dict(
 ) -> None:
     """Test that the WhatsAppMessage.to_dict() method returns the correct dictionary."""
     message = WhatsAppMessage(
-        timestamp=datetime.now(), msgid="msgid", author=author, text=text
+        timestamp=datetime.now(),
+        msgid=WhatsAppMessageId("msgid"),
+        author=author,
+        text=MessageContent(text),
     )
     assert message.to_dict() == expect

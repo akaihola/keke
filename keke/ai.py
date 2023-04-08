@@ -1,18 +1,20 @@
+import logging
 import os
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator, cast
+from typing import Iterator, Sequence, cast
 
 import openai
 
-from keke.data_types import OpenAiMessage, WhatsAppMessage
+from keke.data_types import ChatMessage, MessageContent, OpenAiMessage, Role
 from keke.tokens import num_tokens_from_messages
 
+logger = logging.getLogger(__name__)
 openai.api_key = os.environ["OPENAI_API_KEY"]
 
 
-def get_initial_prompt() -> str:
-    return Path("prompts/initial.txt").read_text()
+def get_initial_prompt() -> MessageContent:
+    return MessageContent(Path("prompts/initial.txt").read_text())
 
 
 @contextmanager
@@ -23,9 +25,9 @@ def progress(message: str) -> Iterator[None]:
     print(f"\r{clear}\r", end="", flush=True)
 
 
-def interact(messages: list[WhatsAppMessage]) -> str:
+def interact(messages: Sequence[ChatMessage]) -> str:
     conversation = [
-        OpenAiMessage(role="user", content=get_initial_prompt()),
+        OpenAiMessage(role=Role("user"), content=get_initial_prompt()),
         messages[-1].to_dict(),
     ]
     total_tokens = num_tokens_from_messages(conversation)
@@ -45,5 +47,7 @@ def interact(messages: list[WhatsAppMessage]) -> str:
         )
     content = cast(str, response.choices[0].message.content)
     tokens = response.usage.completion_tokens
-    print(f"Got a completion with {len(content.split())} words and {tokens} tokens")
+    logger.debug(
+        f"Got a completion with %d words and %d tokens", len(content.split()), tokens
+    )
     return content
