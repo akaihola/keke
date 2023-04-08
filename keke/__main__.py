@@ -80,7 +80,7 @@ def run_with_firefox(args: Namespace) -> None:
         participate_in_chat(driver, args.bundle, args.wake_up, args.dry_run)
     except WebDriverException as exc:
         driver.save_screenshot(
-            "keke-selenium-error-{datetime.now():%Y-%m-%dT%H-%M-%S}.png"
+            f"keke-selenium-error-{datetime.now():%Y-%m-%dT%H-%M-%S}.png"
         )
         logger.exception(exc)
     if not args.use_open_driver:
