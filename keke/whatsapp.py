@@ -1,13 +1,11 @@
-import re
-
 import logging
-import pyperclip
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from time import sleep
 from typing import Any, Callable, NewType, Optional, Self, cast
 from urllib.parse import unquote
 
+import pyperclip
 from bs4 import BeautifulSoup
 from keke.chat_client import ChatState
 from keke.data_types import (
