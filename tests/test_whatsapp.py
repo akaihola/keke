@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from keke.whatsapp import parse_author_and_date, unrender_message
+from keke.whatsapp import WhatsAppChatState, parse_author_and_date, unrender_message
 
 
 @pytest.mark.kwparametrize(
@@ -74,8 +74,15 @@ def test_unrender_message(msg_html: str, expected: str) -> None:
         expect_author="Antti Kaihola",
         expect_date=datetime(2023, 4, 9, 18, 13),
     ),
+    dict(
+        date_author="[6:57 pm, 19/08/2021] Diksha: ",
+        expect_author="Diksha",
+        expect_date=datetime(2021, 8, 19, 18, 57),
+    ),
 )
 def test_parse_author_and_date(
-    date_author: str, expect_author: str, expect_date: str
+    date_author: str, expect_author: str, expect_date: datetime
 ) -> None:
-    assert parse_author_and_date(date_author) == (expect_author, expect_date)
+    state = WhatsAppChatState()
+    author, date, state = parse_author_and_date(date_author, state)
+    assert (author, date) == (expect_author, expect_date)

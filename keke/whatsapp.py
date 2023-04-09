@@ -5,7 +5,7 @@ import pyperclip
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from time import sleep
-from typing import Callable, NewType, Optional, cast
+from typing import Any, Callable, NewType, Optional, Self, cast
 from urllib.parse import unquote
 
 from bs4 import BeautifulSoup
@@ -97,9 +97,20 @@ class WhatsAppMessage(ChatMessage):
         return self.text.startswith(KEKE_PREFIX)
 
 
+def get_all_message_dateformats() -> list[str]:
+    return [
+        "%H.%M, %d.%m.%Y",  # 18.13, 9.4.2023
+        "%I:%M %p, %d/%m/%Y",  # 6:57 pm, 19/08/2021
+    ]
+
+
 @dataclass
 class WhatsAppChatState(ChatState):
     last_messages_by_chat: dict[str, WhatsAppMessage] = field(default_factory=dict)
+    message_dateformats: list[str] = field(default_factory=get_all_message_dateformats)
+
+    def replace(self, **kwargs: Any) -> Self:  # type: ignore[misc]
+        return type(self)(**{**self.__dict__, **kwargs})
 
 
 def read_whatsapp_messages(
@@ -109,7 +120,7 @@ def read_whatsapp_messages(
 
     :param driver: The Selenium driver.
     :param state: Last returned state from this function.
-    :return: The new messages for each chat which had any.
+    :return: The new messages for each chat which had any, and current state.
 
     """
     result: dict[ChatName, list[WhatsAppMessage]] = {}
@@ -134,7 +145,7 @@ def read_whatsapp_messages(
         sleep_extra = 0.0
         for chat_title in chats_with_new_messages:
             open_chat(driver, chat_title)
-            messages = scrape_messages(driver)
+            messages, state = scrape_messages(driver, state)
             new_messages_in_chat = None
             last_seen_message_in_chat = last_messages.get(chat_title, None)
             if last_seen_message_in_chat:
@@ -197,23 +208,27 @@ def read_whatsapp_messages(
                 f"{len(msgs)} messages from {chat}" for chat, msgs in result.items()
             ),
         )
-        return result, WhatsAppChatState(last_messages)
+        return result, state.replace(last_messages_by_chat=last_messages)
 
 
-def scrape_messages(driver: WebDriver) -> list[WhatsAppMessage]:
+def scrape_messages(
+    driver: WebDriver, state: WhatsAppChatState
+) -> tuple[list[WhatsAppMessage], WhatsAppChatState]:
     """Scrape all messages from the currently open chat.
 
     :param driver: The Selenium driver.
-    :return: The scraped messages. Messages with no text are skipped.
+    :param state: The current chat state.
+    :return: The scraped messages, and the state. Messages with no text are skipped.
 
     """
     result = []
     for el in driver.find_elements(By.XPATH, XPATH_MESSAGES):
         try:
-            result.append(scrape_message(el))
+            message, state = scrape_message(el, state)
+            result.append(message)
         except NoSuchElementException:
             continue
-    return result
+    return result, state
 
 
 def get_outer_html(element: WebElement) -> str:
@@ -252,20 +267,23 @@ def get_outer_html(element: WebElement) -> str:
     return unquote(outer_html_escaped)
 
 
-def scrape_message(element: WebElement) -> WhatsAppMessage:
+def scrape_message(
+    element: WebElement, state: WhatsAppChatState
+) -> tuple[WhatsAppMessage, WhatsAppChatState]:
     """Scrape a WhatsApp message from a ``.message-in`` or ``.message-out`` element.
 
     .. note:: The message must have text. If it doesn't, a ``NoSuchElementException``
               is raised.
 
     :param element: The ``.message-in`` or ``message-out`` element.
-    :return: The scraped message.
+    :param state: The current state of the chat.
+    :return: The scraped message, and the current state.
     :raises NoSuchElementException: If the message has no text.
 
     """
     bubble = element.find_element(By.CSS_SELECTOR, "div.copyable-text")
     date_author = bubble.get_attribute("data-pre-plain-text")
-    author, date = parse_author_and_date(date_author)
+    author, date, state = parse_author_and_date(date_author, state)
     msg_el = bubble.find_element(By.CSS_SELECTOR, f"span.selectable-text > span")
     msg_html = get_outer_html(msg_el)
     text = unrender_message(msg_html)
@@ -275,7 +293,7 @@ def scrape_message(element: WebElement) -> WhatsAppMessage:
         logger.exception("Can't get ID from parent element.", exc_info=True)
         raise NoSuchElementException("Can't get ID from parent element.") from exc
     msgid = WhatsAppMessageId(parent.get_attribute("data-id"))
-    return WhatsAppMessage(timestamp=date, msgid=msgid, author=author, text=text)
+    return WhatsAppMessage(timestamp=date, msgid=msgid, author=author, text=text), state
 
 
 def unrender_message(msg_html: str) -> WhatsAppMarkup:
@@ -298,7 +316,9 @@ def unrender_message(msg_html: str) -> WhatsAppMarkup:
     return WhatsAppMarkup(html_text)
 
 
-def parse_author_and_date(date_author: str) -> tuple[str, datetime]:
+def parse_author_and_date(
+    date_author: str, state: WhatsAppChatState
+) -> tuple[str, datetime, WhatsAppChatState]:
     """Parse the author and date from a WhatsApp message bubble.
 
     Example ``date_author`` value: ``[12.34, 01.02.2021] Arthur Author:``
@@ -308,15 +328,25 @@ def parse_author_and_date(date_author: str) -> tuple[str, datetime]:
 
     :param date_author: The text in the ``data-pre-plain-text`` attribute of the
                         ``div.copyable-text`` element.
-    :return: The author and date of the message.
+    :param state: The state of the WhatsApp Web chat manager.
+    :return: The author and date of the message, as well as the current state.
 
     """
     stripped = date_author.strip()
     assert stripped.startswith("[")
     assert stripped.endswith(":")
     date_str, author = stripped[1:-1].split("] ", 1)
-    date = datetime.strptime(date_str, "%H.%M, %d.%m.%Y")
-    return author, date
+    for date_format in state.message_dateformats:
+        try:
+            date = datetime.strptime(date_str, date_format)
+        except ValueError:
+            continue
+        return (
+            author,
+            date,
+            state.replace(message_dateformats=[date_format]),
+        )
+    raise ValueError(f"Can't parse date {date_str!r} with any of the known formats.")
 
 
 def get_last_message_id(driver: WebDriver) -> Optional[str]:
