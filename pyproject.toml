@@ -14,6 +14,7 @@ dependencies = ["beautifulsoup4", "openai", "selenium", "tiktoken"]
 test = [
     "pytest",
     "pytest-kwparametrize",
+    "types-beautifulsoup4",
 ]
 
 [project.scripts]
