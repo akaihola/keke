@@ -6,15 +6,21 @@ from typing import Iterator, Sequence, cast
 
 import openai
 
-from keke.data_types import ChatMessage, WhatsAppMarkup, OpenAiMessage, Role
+from keke.data_types import ChatMessage, ChatName, WhatsAppMarkup, OpenAiMessage, Role
 from keke.tokens import num_tokens_from_messages
 
 logger = logging.getLogger(__name__)
 openai.api_key = os.environ["OPENAI_API_KEY"]
 
 
-def get_initial_prompt() -> WhatsAppMarkup:
-    return WhatsAppMarkup(Path("prompts/initial.txt").read_text())
+def get_initial_prompt(chat_title: ChatName) -> WhatsAppMarkup:
+    chat_specific_path = Path(f"prompts/{chat_title}/initial.txt")
+    path = (
+        chat_specific_path
+        if chat_specific_path.exists()
+        else Path("prompts/initial.txt")
+    )
+    return WhatsAppMarkup(path.read_text())
 
 
 @contextmanager
@@ -25,8 +31,8 @@ def progress(message: str) -> Iterator[None]:
     print(f"\r{clear}\r", end="", flush=True)
 
 
-def interact(messages: Sequence[ChatMessage]) -> str:
-    world = OpenAiMessage(role=Role("user"), content=get_initial_prompt())
+def interact(chat_title: ChatName, messages: Sequence[ChatMessage]) -> str:
+    world = OpenAiMessage(role=Role("user"), content=get_initial_prompt(chat_title))
     next_role = None
     conversation: list[OpenAiMessage] = []
     for message in reversed(messages):
