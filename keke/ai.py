@@ -26,22 +26,29 @@ def progress(message: str) -> Iterator[None]:
 
 
 def interact(messages: Sequence[ChatMessage]) -> str:
-    conversation = [
-        OpenAiMessage(role=Role("user"), content=get_initial_prompt()),
-        messages[-1].to_dict(),
-    ]
-    total_tokens = num_tokens_from_messages(conversation)
-    for message in messages[-2::-1]:
+    world = OpenAiMessage(role=Role("user"), content=get_initial_prompt())
+    next_role = None
+    conversation: list[OpenAiMessage] = []
+    for message in reversed(messages):
         msg = message.to_dict()
-        msg_tokens = num_tokens_from_messages([msg])
-        if total_tokens + msg_tokens > 4096:
+        if msg["role"] == next_role:
+            last = conversation[0]
+            old_content = last["content"]
+            new_conversation = [
+                OpenAiMessage(
+                    role=last["role"],
+                    content=MessageContent(f"{msg['content']}\n\n{old_content}"),
+                )
+            ] + conversation[1:]
+        else:
+            new_conversation = [msg] + conversation
+            next_role = msg["role"]
+        if num_tokens_from_messages([world] + new_conversation) > 4096:
             break
-        total_tokens += msg_tokens
-        conversation.insert(1, msg)
-    with progress(
-        f"Prompting for completion to {len(conversation)} messages"
-        f" with {total_tokens} tokens"
-    ):
+        conversation = new_conversation
+    conversation = [world] + conversation
+    logger.debug(str(conversation))
+    with progress(f"Prompting for completion to {len(conversation)} messages"):
         response = openai.ChatCompletion.create(  # type: ignore[no-untyped-call]
             model="gpt-3.5-turbo", messages=conversation
         )

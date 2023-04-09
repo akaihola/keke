@@ -11,7 +11,7 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from keke import ai
 from keke.browser import SESSION_JSON, attach_to_driver, create_driver
 from keke.command_line import parse_command_line
-from keke.data_types import KEKE_PREFIX, ChatMessage, GroupName, MessageContent
+from keke.data_types import KEKE_PREFIX, ChatMessage, ChatName, MessageContent
 from keke.log import setup_logging
 from keke.whatsapp import (
     WhatsAppChatState,
@@ -89,7 +89,7 @@ def run_with_firefox(args: Namespace) -> None:
 
 def participate_in_chat(
     driver: WebDriver,
-    group_bundles: Collection[Sequence[GroupName]],
+    group_bundles: Collection[Sequence[ChatName]],
     wake_up: str,
     dry_run: bool,
 ) -> None:
@@ -107,7 +107,7 @@ def participate_in_chat(
                     terminal.
 
     """
-    all_messages: dict[GroupName, list[ChatMessage]] = {}
+    all_messages: dict[ChatName, list[ChatMessage]] = {}
     whatsapp_state = WhatsAppChatState()
     while True:
         new_messages_in_groups, whatsapp_state = read_whatsapp_messages(
@@ -126,6 +126,14 @@ def participate_in_chat(
             if not unique_new_messages:
                 continue
             group_messages.extend(unique_new_messages)
+            logger.debug(
+                "%d new scraped messages from %s had %d unique unseen messages, full"
+                " length now %d messages",
+                len(new_messages),
+                source_group,
+                len(unique_new_messages),
+                len(group_messages),
+            )
             last_message = unique_new_messages[-1]
             recent_new_messages = [
                 m for m in unique_new_messages if is_recent(m) or m is last_message
@@ -138,7 +146,7 @@ def participate_in_chat(
 
 def respond(
     driver: WebDriver,
-    group_title: GroupName,
+    group_title: ChatName,
     group_messages: list[ChatMessage],
     dry_run: bool,
 ) -> None:
@@ -161,7 +169,10 @@ def respond(
         now = datetime.utcnow()
         group_messages.append(
             WhatsAppMessage(
-                now, MessageContent(completion), WhatsAppMessageId(str(now)), "dry-run"
+                now,
+                MessageContent(completion),
+                WhatsAppMessageId(str(now)),
+                WhatsAppMessageId("dry-run"),
             )
         )
     else:
@@ -169,8 +180,8 @@ def respond(
 
 
 def find_destination_group(
-    group: GroupName, group_bundles: Collection[Sequence[GroupName]]
-) -> GroupName:
+    group: ChatName, group_bundles: Collection[Sequence[ChatName]]
+) -> ChatName:
     """Find the destination group for a source group.
 
     :param group: A group to search the destination group for.

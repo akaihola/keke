@@ -21,10 +21,11 @@ KEKE_PREFIX = "*Keke:* "
 class ChatMessage(ABC):
     timestamp: datetime
     text: MessageContent
+    author: str
 
     @abstractmethod
     def to_dict(self) -> OpenAiMessage:
         ...
 
 
-GroupName = NewType("GroupName", str)
+ChatName = NewType("GroupName", str)

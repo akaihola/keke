@@ -8,7 +8,7 @@ authors = [{name = "Antti Kaihola", email = "13725+akaihola@users.noreply.github
 license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: MIT License"]
 dynamic = ["version", "description"]
-dependencies = ["openai", "selenium", "tiktoken"]
+dependencies = ["beautifulsoup4", "openai", "selenium", "tiktoken"]
 
 [project.optional-dependencies]
 test = [
