@@ -146,14 +146,14 @@ def participate_in_chat(
 
 def respond(
     driver: WebDriver,
-    group_title: ChatName,
+    chat_title: ChatName,
     group_messages: list[ChatMessage],
     dry_run: bool,
 ) -> None:
     """Respond to previously read messages in a group.
 
     :param driver: The Selenium WebDriver.
-    :param group_title: The group to send the response to.
+    :param chat_title: The group to send the response to.
     :param group_messages: The messages to respond to.
     :param dry_run: ``True`` to just print responses on the terminal
 
@@ -162,12 +162,12 @@ def respond(
         re.sub(
             pattern=r"^ \s* \*? Keke : \s*",
             repl="",
-            string=ai.interact(group_messages),
+            string=ai.interact(chat_title, group_messages),
             flags=re.VERBOSE,
         )
     )
     if dry_run:
-        logger.info(f"<{group_title}> {KEKE_PREFIX}{completion}")
+        logger.info(f"<{chat_title}> {KEKE_PREFIX}{completion}")
         now = datetime.utcnow()
         group_messages.append(
             WhatsAppMessage(
@@ -178,7 +178,7 @@ def respond(
             )
         )
     else:
-        send_whatsapp_message(driver, group_title, completion)
+        send_whatsapp_message(driver, chat_title, completion)
 
 
 def find_destination_group(
@@ -217,7 +217,10 @@ def is_for_keke(message: ChatMessage, wake_up: str) -> bool:
     :return: ``True`` if the message is for the chatbot, ``False`` otherwise.
 
     """
-    return bool(re.search(wake_up, message.text, re.IGNORECASE))
+    return bool(
+        re.search(wake_up, message.text, re.IGNORECASE)
+        and not message.text.startswith(KEKE_PREFIX)
+    )
 
 
 def is_quit(message: ChatMessage) -> bool:
