@@ -1,8 +1,12 @@
+import re
+
 import logging
+import pyperclip
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from time import sleep
 from typing import Callable, NewType, Optional, cast
+from urllib.parse import unquote
 
 from bs4 import BeautifulSoup
 from keke.chat_client import ChatState
@@ -212,6 +216,42 @@ def scrape_messages(driver: WebDriver) -> list[WhatsAppMessage]:
     return result
 
 
+def get_outer_html(element: WebElement) -> str:
+    """Get the element's outer HTML, handling Unicode extended code points correctly.
+
+    :param element: The element.
+    :return: The element's outer HTML.
+
+    """
+    outer_html_escaped = element.parent.execute_script(
+        r"""
+        var S = arguments[0].outerHTML;
+        var length = S.length;
+        var REPLACEMENT_CHARACTER = '\uFFFD';
+        var result = Array(length);
+        for (var i = 0; i < length; i++) {
+          var charCode = S.charCodeAt(i);
+          // single UTF-16 code unit
+          if ((charCode & 0xF800) != 0xD800) result[i] = S.charAt(i);
+          // unpaired surrogate
+          else if (
+            charCode >= 0xDC00
+            || i + 1 >= length
+            || (S.charCodeAt(i + 1) & 0xFC00) != 0xDC00
+          ) result[i] = REPLACEMENT_CHARACTER;
+          // surrogate pair
+          else {
+            result[i] = S.charAt(i);
+            result[++i] = S.charAt(i);
+          }
+        }
+        return encodeURI(result.join(''));
+        """,
+        element,
+    )
+    return unquote(outer_html_escaped)
+
+
 def scrape_message(element: WebElement) -> WhatsAppMessage:
     """Scrape a WhatsApp message from a ``.message-in`` or ``.message-out`` element.
 
@@ -224,10 +264,10 @@ def scrape_message(element: WebElement) -> WhatsAppMessage:
 
     """
     bubble = element.find_element(By.CSS_SELECTOR, "div.copyable-text")
-    date_author = bubble.get_attribute("data-pre-plain-text").strip()
+    date_author = bubble.get_attribute("data-pre-plain-text")
     author, date = parse_author_and_date(date_author)
     msg_el = bubble.find_element(By.CSS_SELECTOR, f"span.selectable-text > span")
-    msg_html = msg_el.get_attribute("outerHTML")
+    msg_html = get_outer_html(msg_el)
     text = unrender_message(msg_html)
     try:
         parent = element.find_element(By.XPATH, "./..")
@@ -252,8 +292,10 @@ def unrender_message(msg_html: str) -> WhatsAppMarkup:
     message_soup = BeautifulSoup(msg_html, "html.parser")
     for strong in message_soup.find_all("strong"):
         strong.string = f"*{strong.string}*"
-    text = WhatsAppMarkup(message_soup.get_text())
-    return text
+    for img in message_soup.find_all("img"):
+        img.string = img["alt"]
+    html_text = message_soup.get_text()
+    return WhatsAppMarkup(html_text)
 
 
 def parse_author_and_date(date_author: str) -> tuple[str, datetime]:
@@ -269,9 +311,10 @@ def parse_author_and_date(date_author: str) -> tuple[str, datetime]:
     :return: The author and date of the message.
 
     """
-    assert date_author.startswith("[")
-    assert date_author.endswith(":")
-    date_str, author = date_author[1:-1].split("] ", 1)
+    stripped = date_author.strip()
+    assert stripped.startswith("[")
+    assert stripped.endswith(":")
+    date_str, author = stripped[1:-1].split("] ", 1)
     date = datetime.strptime(date_str, "%H.%M, %d.%m.%Y")
     return author, date
 
@@ -441,7 +484,13 @@ def send_whatsapp_message(
             f"keke-{datetime.now():%Y-%m-%dT%H-%M-%S}"
             " compose box input not found.png"
         )
+    logger.debug(f"Sending to {chat_title}: {KEKE_PREFIX}{text}")
     for char in f"{KEKE_PREFIX}{text}":
-        message_field.send_keys(char)
-        sleep(0.01)
+        if ord(char) > 255:
+            pyperclip.copy(char)
+            message_field.send_keys(Keys.CONTROL, "v")
+        else:
+            message_field.send_keys(char)
+        sleep(0.001)
     message_field.send_keys(Keys.RETURN)
+    pyperclip.copy("")

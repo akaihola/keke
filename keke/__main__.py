@@ -1,5 +1,6 @@
 import json
 import logging
+import pyperclip
 import re
 from argparse import Namespace
 from datetime import datetime, timedelta
@@ -64,6 +65,13 @@ def run_with_firefox(args: Namespace) -> None:
     :param args: Command line arguments.
 
     """
+    if not pyperclip.is_available():
+        raise RuntimeError(
+            "Can't find a support library for using the clipboard. This is required "
+            "for typing Unicode characters into WhatsApp. See "
+            "https://pyperclip.readthedocs.io/en/latest/index.html"
+            "#not-implemented-error"
+        )
     if args.use_open_driver:
         if args.dump_config:
             logger.info("Would attach to driver session from {SESSION_JSON}.")
