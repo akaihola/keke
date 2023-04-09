@@ -10,11 +10,16 @@ from keke.data_types import (
     KEKE_PREFIX,
     ChatMessage,
     ChatName,
-    WhatsAppMarkup,
     OpenAiMessage,
     Role,
+    WhatsAppMarkup,
 )
-from selenium.common import NoSuchElementException, TimeoutException, WebDriverException
+from selenium.common import (
+    NoSuchElementException,
+    StaleElementReferenceException,
+    TimeoutException,
+    WebDriverException,
+)
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
@@ -224,9 +229,12 @@ def scrape_message(element: WebElement) -> WhatsAppMessage:
     msg_el = bubble.find_element(By.CSS_SELECTOR, f"span.selectable-text > span")
     msg_html = msg_el.get_attribute("outerHTML")
     text = unrender_message(msg_html)
-    msgid = WhatsAppMessageId(
-        element.find_element(By.XPATH, "./..").get_attribute("data-id")
-    )
+    try:
+        parent = element.find_element(By.XPATH, "./..")
+    except StaleElementReferenceException as exc:
+        logger.exception("Can't get ID from parent element.", exc_info=True)
+        raise NoSuchElementException("Can't get ID from parent element.") from exc
+    msgid = WhatsAppMessageId(parent.get_attribute("data-id"))
     return WhatsAppMessage(timestamp=date, msgid=msgid, author=author, text=text)
 
 
