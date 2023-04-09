@@ -1,6 +1,8 @@
+from datetime import datetime
+
 import pytest
 
-from keke.whatsapp import unrender_message
+from keke.whatsapp import parse_author_and_date, unrender_message
 
 
 @pytest.mark.kwparametrize(
@@ -64,3 +66,16 @@ from keke.whatsapp import unrender_message
 )
 def test_unrender_message(msg_html: str, expected: str) -> None:
     assert unrender_message(msg_html) == expected
+
+
+@pytest.mark.kwparametrize(
+    dict(
+        date_author="[18.13, 9.4.2023] Antti Kaihola: ",
+        expect_author="Antti Kaihola",
+        expect_date=datetime(2023, 4, 9, 18, 13),
+    ),
+)
+def test_parse_author_and_date(
+    date_author: str, expect_author: str, expect_date: str
+) -> None:
+    assert parse_author_and_date(date_author) == (expect_author, expect_date)
