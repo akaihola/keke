@@ -10,7 +10,7 @@ from keke.data_types import (
     KEKE_PREFIX,
     ChatMessage,
     ChatName,
-    MessageContent,
+    WhatsAppMarkup,
     OpenAiMessage,
     Role,
 )
@@ -70,7 +70,7 @@ class WhatsAppMessage(ChatMessage):
         author = "" if self.is_from_keke else f"{self.author}: "
         return OpenAiMessage(
             role=Role("assistant" if self.is_from_keke else "user"),
-            content=MessageContent(f"{author}{self.text_without_keke_prefix}"),
+            content=WhatsAppMarkup(f"{author}{self.text_without_keke_prefix}"),
         )
 
     def __str__(self) -> str:
@@ -230,7 +230,7 @@ def scrape_message(element: WebElement) -> WhatsAppMessage:
     return WhatsAppMessage(timestamp=date, msgid=msgid, author=author, text=text)
 
 
-def unrender_message(msg_html: str) -> MessageContent:
+def unrender_message(msg_html: str) -> WhatsAppMarkup:
     """Unrender a WhatsApp message from HTML back to WhatsApp markup.
 
     Bold text is converted to back to ``*bold*``.
@@ -244,7 +244,7 @@ def unrender_message(msg_html: str) -> MessageContent:
     message_soup = BeautifulSoup(msg_html, "html.parser")
     for strong in message_soup.find_all("strong"):
         strong.string = f"*{strong.string}*"
-    text = MessageContent(message_soup.get_text())
+    text = WhatsAppMarkup(message_soup.get_text())
     return text
 
 
@@ -410,7 +410,9 @@ def get_selected_chat_title(driver: WebDriver) -> Optional[ChatName]:
     return cast(ChatName, title_element.get_attribute("title"))
 
 
-def send_whatsapp_message(driver: WebDriver, chat_title: ChatName, text: str) -> None:
+def send_whatsapp_message(
+    driver: WebDriver, chat_title: ChatName, text: WhatsAppMarkup
+) -> None:
     """Send a message to a WhatsApp chat.
 
     Open WhatsApp Web if it is not already open. Open the chat in the WhatsApp UI if

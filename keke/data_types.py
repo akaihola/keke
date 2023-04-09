@@ -4,13 +4,13 @@ from datetime import datetime
 from typing import NewType, NotRequired, TypedDict
 
 Role = NewType("Role", str)
-MessageContent = NewType("MessageContent", str)
+WhatsAppMarkup = NewType("WhatsAppMarkup", str)
 SenderName = NewType("SenderName", str)
 
 
 class OpenAiMessage(TypedDict):
     role: Role
-    content: MessageContent
+    content: WhatsAppMarkup
     name: NotRequired[SenderName]
 
 
@@ -20,7 +20,7 @@ KEKE_PREFIX = "*Keke:* "
 @dataclass
 class ChatMessage(ABC):
     timestamp: datetime
-    text: MessageContent
+    text: WhatsAppMarkup
     author: str
 
     @abstractmethod
@@ -28,4 +28,4 @@ class ChatMessage(ABC):
         ...
 
 
-ChatName = NewType("GroupName", str)
+ChatName = NewType("ChatName", str)

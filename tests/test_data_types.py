@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from keke.data_types import MessageContent, OpenAiMessage
+from keke.data_types import WhatsAppMarkup, OpenAiMessage
 from keke.whatsapp import WhatsAppMessage, WhatsAppMessageId
 
 
@@ -21,6 +21,6 @@ def test_whatsapp_message_to_dict(
         timestamp=datetime.now(),
         msgid=WhatsAppMessageId("msgid"),
         author=author,
-        text=MessageContent(text),
+        text=WhatsAppMarkup(text),
     )
     assert message.to_dict() == expect

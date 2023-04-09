@@ -6,15 +6,15 @@ from typing import Iterator, Sequence, cast
 
 import openai
 
-from keke.data_types import ChatMessage, MessageContent, OpenAiMessage, Role
+from keke.data_types import ChatMessage, WhatsAppMarkup, OpenAiMessage, Role
 from keke.tokens import num_tokens_from_messages
 
 logger = logging.getLogger(__name__)
 openai.api_key = os.environ["OPENAI_API_KEY"]
 
 
-def get_initial_prompt() -> MessageContent:
-    return MessageContent(Path("prompts/initial.txt").read_text())
+def get_initial_prompt() -> WhatsAppMarkup:
+    return WhatsAppMarkup(Path("prompts/initial.txt").read_text())
 
 
 @contextmanager
@@ -37,7 +37,7 @@ def interact(messages: Sequence[ChatMessage]) -> str:
             new_conversation = [
                 OpenAiMessage(
                     role=last["role"],
-                    content=MessageContent(f"{msg['content']}\n\n{old_content}"),
+                    content=WhatsAppMarkup(f"{msg['content']}\n\n{old_content}"),
                 )
             ] + conversation[1:]
         else:

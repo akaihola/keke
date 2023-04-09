@@ -11,7 +11,7 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from keke import ai
 from keke.browser import SESSION_JSON, attach_to_driver, create_driver
 from keke.command_line import parse_command_line
-from keke.data_types import KEKE_PREFIX, ChatMessage, ChatName, MessageContent
+from keke.data_types import KEKE_PREFIX, ChatMessage, ChatName, WhatsAppMarkup
 from keke.log import setup_logging
 from keke.whatsapp import (
     WhatsAppChatState,
@@ -158,11 +158,13 @@ def respond(
     :param dry_run: ``True`` to just print responses on the terminal
 
     """
-    completion = re.sub(
-        pattern=r"^ \s* \*? Keke : \s*",
-        repl="",
-        string=ai.interact(group_messages),
-        flags=re.VERBOSE,
+    completion = WhatsAppMarkup(
+        re.sub(
+            pattern=r"^ \s* \*? Keke : \s*",
+            repl="",
+            string=ai.interact(group_messages),
+            flags=re.VERBOSE,
+        )
     )
     if dry_run:
         logger.info(f"<{group_title}> {KEKE_PREFIX}{completion}")
@@ -170,7 +172,7 @@ def respond(
         group_messages.append(
             WhatsAppMessage(
                 now,
-                MessageContent(completion),
+                completion,
                 WhatsAppMessageId(str(now)),
                 WhatsAppMessageId("dry-run"),
             )
