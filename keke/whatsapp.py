@@ -6,8 +6,8 @@ from time import sleep
 from typing import Any, Callable, NewType, Optional, Self, cast
 from urllib.parse import unquote
 
-import pyperclip
 from bs4 import BeautifulSoup
+from emoji import demojize
 from keke.chat_client import ChatState
 from keke.data_types import (
     KEKE_PREFIX,
@@ -64,7 +64,8 @@ XPATH_RECENT_CHAT_TITLE_ELEMENT = (
     f"//div[{XPATH_CHAT_CONTAINER} and descendant::{XPATH_TIME_UPDATED}]"
     f"//{XPATH_CHAT_TITLE}"
 )
-
+XPATH_EMOJI_SUGGESTION = "//span[@data-emoji-index=0]"
+XPATH_EMOJI_VARIANT = "//li[@data-testid='mi-emoji-variant']"
 
 WhatsAppMessageId = NewType("WhatsAppMessageId", str)
 
@@ -505,12 +506,92 @@ def send_whatsapp_message(
             " compose box input not found.png"
         )
     logger.debug(f"Sending to {chat_title}: {KEKE_PREFIX}{text}")
-    for char in f"{KEKE_PREFIX}{text}":
-        if ord(char) > 255:
-            pyperclip.copy(char)
-            message_field.send_keys(Keys.CONTROL, "v")
-        else:
-            message_field.send_keys(char)
+    message = f"{KEKE_PREFIX}{text}"
+    for previous, char in zip(f" {message[:-1]}", message):
+        emoji_text = demojize(char)  # type: ignore[no-untyped-call]
         sleep(0.001)
+        if not emoji_text.startswith(":") or emoji_text == ":":
+            message_field.send_keys(char)
+            continue
+        space_inserted = previous != " "
+        if space_inserted:
+            message_field.send_keys(" ")
+
+        def emoji_suggestion_appears() -> bool:
+            try:
+                WebDriverWait(driver, 0.05, 0.01).until(
+                    lambda d: d.find_elements(By.XPATH, XPATH_EMOJI_SUGGESTION)
+                )
+            except TimeoutException:
+                return False
+            return True
+
+        def emoji_suggestion_disappears() -> bool:
+            try:
+                WebDriverWait(driver, 0.05, 0.01).until_not(
+                    lambda d: d.find_elements(By.XPATH, XPATH_EMOJI_SUGGESTION)
+                )
+            except TimeoutException:
+                return False
+            return True
+
+        got_suggestion = False
+        logger.debug(f"Typing {emoji_text[:-1]!r}...")
+        index = 0
+        for index, emoji_char in enumerate(emoji_text[:-1].replace("_", " ")):
+            sleep(0.001)
+            logger.debug(f"Typing {emoji_char!r}...")
+            message_field.send_keys(emoji_char)
+            sleep(0.01)
+            if index < 2:
+                continue  # emoji suggestions don't appear for the first two chars
+            if not got_suggestion:
+                logger.debug("Emoji suggestion appeared, continuing typing...")
+                got_suggestion = emoji_suggestion_appears()
+                continue
+            if not emoji_suggestion_disappears():
+                logger.debug("Emoji suggestion stays, continuing typing...")
+                continue
+            got_suggestion = False
+            break
+        if not got_suggestion:
+            logger.debug("No emoji suggestion, deleting chars...")
+            for i in range(index):
+                message_field.send_keys(Keys.BACKSPACE)
+                if emoji_suggestion_appears():
+                    got_suggestion = True
+                    break
+            else:
+                logger.debug("Emoji suggestion didn't reappear, typing emoji chars...")
+                for emoji_char_ in emoji_text[:-1]:
+                    sleep(0.01)
+                    message_field.send_keys(emoji_char_)
+        sleep(0.1)
+        if not got_suggestion:
+            logger.debug(f"No suggestion, typing a colon...")
+            message_field.send_keys(":")
+            continue
+        logger.debug("Hitting Tab on emoji suggestion...")
+        sleep(0.1)
+        message_field.send_keys(Keys.TAB)
+        sleep(0.1)
+        variants = driver.find_elements(By.XPATH, XPATH_EMOJI_VARIANT)
+        if variants:
+            logger.debug("Clicking on on variant dialog...")
+            variants[0].click()
+            sleep(0.1)
+        if space_inserted:
+            logger.debug("Deleting leading space...")
+            message_field.send_keys(Keys.LEFT)
+            sleep(0.001)
+            message_field.send_keys(Keys.BACKSPACE)
+            sleep(0.001)
+            message_field.send_keys(Keys.RIGHT)
+            sleep(0.001)
+            message_field.send_keys(Keys.END)
+    sleep(0.001)
+    logger.debug("Clicking on message field, just in case...")
+    message_field.click()
+    sleep(0.001)
+    logger.debug("Hitting Enter on the message...")
     message_field.send_keys(Keys.RETURN)
-    pyperclip.copy("")

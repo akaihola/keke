@@ -1,6 +1,5 @@
 import json
 import logging
-import pyperclip
 import re
 from argparse import Namespace
 from datetime import datetime, timedelta
@@ -65,7 +64,6 @@ def run_with_firefox(args: Namespace) -> None:
     :param args: Command line arguments.
 
     """
-    _ = pyperclip.paste()
     if args.use_open_driver:
         if args.dump_config:
             logger.info("Would attach to driver session from {SESSION_JSON}.")
