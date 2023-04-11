@@ -10,6 +10,7 @@ classifiers = ["License :: OSI Approved :: MIT License"]
 dynamic = ["version", "description"]
 dependencies = [
     "beautifulsoup4",
+    "emoji",
     "openai",
     "selenium",
     "tiktoken",
