@@ -1,6 +1,7 @@
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from textwrap import shorten
 from time import sleep
 from typing import Any, Callable, NewType, Optional, Self, cast
 from urllib.parse import unquote
@@ -132,7 +133,7 @@ def read_whatsapp_messages(
         try:
             logger.debug(
                 f"Finding chats with new messages. Last message in {current_chat} is"
-                f" {last_message_in_current_chat}."
+                f" {shorten(str(last_message_in_current_chat), 60)}."
             )
             chats_with_new_messages = WebDriverWait(
                 driver, timeout=10.0, poll_frequency=1.0
