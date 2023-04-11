@@ -49,7 +49,7 @@ def interact(chat_title: ChatName, messages: Sequence[ChatMessage]) -> str:
         else:
             new_conversation = [msg] + conversation
             next_role = msg["role"]
-        if num_tokens_from_messages([world] + new_conversation) > 4096:
+        if num_tokens_from_messages([world] + new_conversation) > 3500:
             break
         conversation = new_conversation
     conversation = [world] + conversation
