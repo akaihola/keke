@@ -189,7 +189,6 @@ def read_whatsapp_messages(
             result.setdefault(chat_title, []).extend(new_messages_in_chat)
             last_messages[chat_title] = new_messages_in_chat[-1]
         if not result:
-            logging.debug("No new messages found. Waiting for new messages...")
             sleep(sleep_extra)
             continue
         logging.debug(
