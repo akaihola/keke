@@ -1,3 +1,5 @@
+from textwrap import shorten
+
 import logging
 import os
 from contextlib import contextmanager
@@ -53,7 +55,10 @@ def interact(chat_title: ChatName, messages: Sequence[ChatMessage]) -> str:
             break
         conversation = new_conversation
     conversation = [world] + conversation
-    logger.debug(str(conversation))
+    logger.debug(
+        f"Responding to conversation of length {len(conversation)}, last "
+        f"message {shorten(str(conversation[-1]), 60)}"
+    )
     with progress(f"Prompting for completion to {len(conversation)} messages"):
         response = openai.ChatCompletion.create(  # type: ignore[no-untyped-call]
             model="gpt-3.5-turbo", messages=conversation
