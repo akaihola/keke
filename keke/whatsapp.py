@@ -186,14 +186,6 @@ def read_whatsapp_messages(
                 ]
             if not new_messages_in_chat:
                 continue
-            for message in new_messages_in_chat:
-                logger.debug(
-                    "Scraped: [%s] %s: %s (%s)",
-                    message.timestamp,
-                    message.author,
-                    message.text,
-                    message.msgid,
-                )
             result.setdefault(chat_title, []).extend(new_messages_in_chat)
             last_messages[chat_title] = new_messages_in_chat[-1]
         if not result:
